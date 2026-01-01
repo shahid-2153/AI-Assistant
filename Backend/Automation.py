@@ -1,4 +1,9 @@
-from Backend.TextToSpeech import TextToSpeech
+try:
+    # When run from Main.py (project root)
+    from Backend.TextToSpeech import TextToSpeech
+except ModuleNotFoundError:
+    # When run directly (VS Code ▶ on this file)
+    from TextToSpeech import TextToSpeech
 from AppOpener import close, open as appopen 
 from webbrowser import open as webopen 
 from pywhatkit import search, playonyt  
@@ -6,12 +11,20 @@ from dotenv import dotenv_values
 from bs4 import BeautifulSoup  
 from rich import print  
 from groq import Groq
+import threading
 import webbrowser  
 import subprocess
 import requests  
 import keyboard 
 import asyncio  
 import os 
+
+SILENT_MODE = False 
+
+
+
+async def speak(text: str):
+    await asyncio.to_thread(TextToSpeech, text)
 
 env_vars = dotenv_values('.env')
 GroqAPIKey = env_vars.get('GroqAPIKey')  
@@ -44,7 +57,7 @@ def Content(Topic):
         messages.append({"role": "user", "content": f"{prompt}"}) 
 
         completion = client.chat.completions.create(
-            model="mixtral-8x7b-32768",  
+            model="llama-3.3-70b-versatile",  
             messages=SystemChatBot + messages,  
             max_tokens=2048,  
             temperature=0.7, 
@@ -83,105 +96,57 @@ def PlayYouTube(query):
     return True  
 
 
+def build_response(commands: list[str]) -> str:
+    opened = []
+    closed = []
+    played = []
+
+    for cmd in commands:
+        if cmd.startswith("open "):
+            opened.append(cmd.replace("open ", ""))
+        elif cmd.startswith("close "):
+            closed.append(cmd.replace("close ", ""))
+        elif cmd.startswith("play "):
+            played.append(cmd.replace("play ", ""))
+
+    responses = []
+
+    if opened:
+        responses.append("opening " + ", ".join(opened))
+    if closed:
+        responses.append("closing " + ", ".join(closed))
+    if played:
+        responses.append("playing " + ", ".join(played))
+
+    if responses:
+        return "I am " + " and ".join(responses) + "."
+    
+    return ""
+
+
 def OpenApp(app, sess=requests.session()):
     try:
-        TextToSpeech(f"Opening {app}...")  # AI will speak before opening the app
+        # Try opening local app
         appopen(app, match_closest=True, output=True, throw_error=True)
-        TextToSpeech(f"{app} is now open.")  # AI will confirm after opening
-        return True  
+
+        # 🔊 Speak success
+        return True
 
     except Exception as e:
-        TextToSpeech(f"App not found locally: {app}. Searching online...")  
-        print(f"Error: {e}")
+        print(f"App not found locally: {app}")
+        print(e)
 
-        def extract_links(html):
-            if html is None:
-                return []
-            
-            soup = BeautifulSoup(html, 'html.parser')
-            links = [tag.get("href") for tag in soup.find_all('a', href=True) if tag.get("href").startswith("http") and "bing.com" not in tag.get("href")]
-            return links
+        # 🔊 Speak fallback
+        
 
-        def search_bing(query):
-            url = f"https://www.bing.com/search?q={query}"
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"}
+        # 🔍 Open Google search
+        url = f"https://www.{app}.com"
+        webbrowser.open(url)
+        
+        # 🔊 Speak fallback
+        
+        return True
 
-            TextToSpeech(f"Searching online for {query}...")
-            response = sess.get(url, headers=headers)
-
-            if response.status_code == 200:
-                print("Search successful. Parsing results...")
-                return response.text
-            else:
-                TextToSpeech("Failed to retrieve search results.")
-                print(f"Failed to retrieve search results. Status Code: {response.status_code}")
-                return None
-
-        html = search_bing(app)
-
-        if html:
-            links = extract_links(html)
-            print(f"Extracted links: {links}")
-
-            if links:
-                TextToSpeech(f"Opening first result for {app} online.")
-                webbrowser.open(links[0])  
-            else:
-                TextToSpeech(f"No valid search results found for {app}.")
-                print(f"No valid search results found for {app}")
-        else:
-            TextToSpeech("Failed to fetch search results.")
-
-        return False
-    try:
-        Speak(f"Opening {app}...")
-        appopen(app, match_closest=True, output=True, throw_error=True)
-        Speak(f"{app} is now open.")
-        return True  
-
-    except Exception as e:
-        Speak(f"App not found locally: {app}. Searching online...")
-        print(f"Error: {e}")
-
-        def extract_links(html):
-            if html is None:
-                return []
-            
-            soup = BeautifulSoup(html, 'html.parser')
-            links = [tag.get("href") for tag in soup.find_all('a', href=True) if tag.get("href").startswith("http") and "bing.com" not in tag.get("href")]
-            return links
-
-        def search_bing(query):
-            url = f"https://www.bing.com/search?q={query}"
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"}
-
-            Speak(f"Searching online for {query}...")
-            response = sess.get(url, headers=headers)
-
-            if response.status_code == 200:
-                print("Search successful. Parsing results...")
-                return response.text
-            else:
-                Speak("Failed to retrieve search results.")
-                print(f"Failed to retrieve search results. Status Code: {response.status_code}")
-                return None
-
-        html = search_bing(app)
-
-        if html:
-            links = extract_links(html)
-            print(f"Extracted links: {links}")
-
-            if links:
-                Speak(f"Opening first result for {app} online.")
-                webbrowser.open(links[0])  
-            else:
-                Speak(f"No valid search results found for {app}.")
-                print(f"No valid search results found for {app}")
-        else:
-            Speak("Failed to fetch search results.")
-
-        return False
 def CloseApp(app):
     if "chrome" in app:
         pass  
@@ -220,7 +185,7 @@ async def TranslateAndExecute(commands: list[str]):
     funcs = []  
 
     for command in commands:
-
+        
         if command.startswith("open "):  
 
             if "open it" in command:  
@@ -246,7 +211,7 @@ async def TranslateAndExecute(commands: list[str]):
         elif command.startswith("play "): 
             fun = asyncio.to_thread(PlayYouTube, command.removeprefix("play "))  
             funcs.append(fun)
-
+            
         elif command.startswith("content "):  
             fun = asyncio.to_thread(Content, command.removeprefix("content ")) 
             funcs.append(fun)
@@ -274,12 +239,18 @@ async def TranslateAndExecute(commands: list[str]):
             yield result
 
 async def Automation(commands: list[str]):
+    open_apps = [c.replace("open ", "") for c in commands if c.startswith("open ")]
 
-    async for result in TranslateAndExecute(commands):
+    # 🔊 Speak ONLY ONCE
+    if len(open_apps) == 1:
+        await speak(f"Opening {open_apps[0]}")
+    elif len(open_apps) > 1:
+       await speak("Opening " + ", ".join(open_apps))
+
+    # 🚀 Execute commands silently
+    async for _ in TranslateAndExecute(commands):
         pass
 
-    return True  
-
+    return True
 if __name__ == "__main__":
-    asyncio.run(Automation(["open facebook","open instagram","open notepad","open netflix","close whatsapp"]))
-    
+    asyncio.run(Automation(["open facebook", "open instagram", "open notepad", "open netflix"]))

@@ -23,12 +23,32 @@ def open_image(prompt):
         except IOError:
             print(f"Unable to open {image_path}")
 
-API_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+API_URL = "https://router.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+
 headers = {"Authorization": f"Bearer {get_key('.env', 'HuggingFaceAPIKey')}"}
 
 async def query(payload):
-    response = await asyncio.to_thread(requests.post, API_URL, headers=headers, json=payload)
-    return response.content
+    response = await asyncio.to_thread(
+        requests.post,
+        API_URL,
+        headers=headers,
+        json=payload
+    )
+
+    content_type = response.headers.get("content-type", "")
+
+    # ✅ Only return bytes if it's an image
+    if "image" in content_type:
+        return response.content
+
+    # ❌ Otherwise print error and return None
+    try:
+        print("HF Error:", response.json())
+    except Exception:
+        print("HF Error (raw):", response.text)
+
+    return None
+
 
 async def generate_images(prompt: str):
     tasks = []
@@ -37,6 +57,7 @@ async def generate_images(prompt: str):
         payload = {
             "inputs": f"{prompt}, quality=4k, sharpness=maximum, Ultra High details, high resolution, seed = {randint(0, 1000000)}",
         }
+        await asyncio.sleep(1)
         task = asyncio.create_task(query(payload))
         tasks.append(task)
 
@@ -46,7 +67,11 @@ async def generate_images(prompt: str):
         image_path = fr"Data\{prompt.replace(' ', '_')}{i + 1}.jpg"
 
         try:
-            img = Image.open(io.BytesIO(image_bytes)) 
+            if image_bytes is None:
+                print(f"Skipping image {i+1} (no valid image data)")
+                continue
+
+            img = Image.open(io.BytesIO(image_bytes))
             img.save(image_path, "JPEG")
             print(f"Saved image: {image_path}")
         except Exception as e:

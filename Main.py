@@ -22,7 +22,7 @@ from time import sleep
 import subprocess
 import threading
 import json
-import os
+
 
 env_vars = dotenv_values(".env")
 Username = env_vars.get("Username")
@@ -170,15 +170,6 @@ def MainExecution():
                 SetAssistantStatus("Answering...")
                 TextToSpeech(Answer)
                 return True
-
-            elif "exit" in Queries:
-                QueryFinal = "Okay, Bye!"
-                Answer = ChatBot(QueryModifier(QueryFinal))
-                ShowTextToScreen(f"{Assistantname} : {Answer}")
-                SetAssistantStatus("Answering...")
-                TextToSpeech(Answer)
-                SetAssistantStatus("Answering...")
-                os._exit(1)
 
 def FirstThread(): 
     while True:

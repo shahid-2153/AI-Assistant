@@ -333,7 +333,7 @@ class CustomTopBar(QWidget):
         line_frame.setFrameShape(QFrame.HLine)
         line_frame.setFrameShadow(QFrame.Sunken)
         line_frame.setStyleSheet("border-color: black;")
-        title_label = QLabel(f" {str(Assistantname).capitalize()}  AI  ")
+        title_label = QLabel(f" {str(Assistantname).capitalize()}  ")
         title_label.setStyleSheet("color: black; font-size: 18px;; background-color: white")
         home_button.clicked.connect(lambda: self.stack_widget.setCurrentIndex(0))
         message_button.clicked.connect(lambda: self.stack_widget.setCurrentIndex(1))

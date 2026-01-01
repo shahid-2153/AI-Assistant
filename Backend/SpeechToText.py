@@ -2,7 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
-from webdriver_manager.chrome import ChromeDriverManager
+
 from dotenv import dotenv_values
 import os
 import mtranslate as mt
@@ -73,7 +73,11 @@ chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--disable-logging")  
 chrome_options.add_argument("--log-level=3")  
 
-service = Service(ChromeDriverManager().install())
+
+# 🔹 SET CHROMEDRIVER PATH (MATCHES CHROME 143)
+service = Service(r"C:\WebDriver\chromedriver.exe")
+
+
 driver = webdriver.Chrome(service=service, options=chrome_options)
 
 temp_dir_path = os.path.join(os.getcwd(), "Frontend", "Files")

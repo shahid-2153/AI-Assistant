@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# Runtime data
+Data/
+Frontend/Files/*.data
+
+# Audio & images
+*.mp3
+*.wav
+*.jpg
+*.png
+
+# Editor
+.vscode/
+
+# RVC large model files
+RVC/assets/
+
+# OS
+.DS_Store
+Thumbs.db

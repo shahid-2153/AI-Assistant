@@ -1,20 +1,28 @@
-import cohere
-from rich import print
+from groq import Groq
 from dotenv import dotenv_values
+from rich import print# Import the Rich library to enhance terminal outputs.
 
+# Load environment variables from the .env file.
 env_vars = dotenv_values(".env")
+GroqAPIKey = env_vars.get("GroqAPIKey")
+
+# Retrieve API key.
 CohereAPIKey = env_vars.get("CohereAPIKey")
 
-co = cohere.Client(api_key=CohereAPIKey)
+# Create Groq client
+client = Groq(api_key=GroqAPIKey)
 
+# Define a list of recognized function keywords for task categorization.
 funcs = [
     "exit", "general", "realtime", "open", "close", "play",
     "generate image", "system", "content", "google search",
     "youtube search", "reminder"
 ]
 
+# Initialize an empty list to store user messages.
 messages = []
 
+# Define the preamble that guides the AI model on how to categorize queries.
 preamble = """
 You are a very accurate Decision-Making Model, which decides what kind of a query is given to you.
 You will decide whether a query is a 'general' query, a 'realtime' query, or is asking to perform any task or automation like 'open facebook, instagram', 'can you write a application and open it in notepad'
@@ -32,9 +40,15 @@ You will decide whether a query is a 'general' query, a 'realtime' query, or is 
 -> Respond with 'youtube search (topic)' if a query is asking to search a specific topic on youtube but if the query is asking to search multiple topics on youtube, respond with 'youtube search 1st topic, youtube search 2nd topic' and so on.
 *** If the query is asking to perform multiple tasks like 'open facebook, telegram and close whatsapp' respond with 'open facebook, open telegram, close whatsapp' ***
 *** If the user is saying goodbye or wants to end the conversation like 'bye jarvis.' respond with 'exit'.***
-*** Respond with 'general (query)' if you can't decide the kind of query or if a query is asking to perform a task which is not mentioned above. ***
+*** Respond with 'general (query)' if you can't decide the kind of query or if a query is asking to perform a task which is not mentioned above.***
+
+Rules:
+- Output ONLY comma-separated command names
+- No explanations
+- No extra text
 """
 
+# ================== CHAT HISTORY ==================
 ChatHistory = [
     {"role": "User", "message": "how are you ? "},
     {"role": "Chatbot", "message": "general how are you ? "},
@@ -48,46 +62,47 @@ ChatHistory = [
     {"role": "Chatbot", "message": "general chat with me. "}
 ]
 
-def FirstLayerDMM(prompt: str = "test"):
+# ================== CORE FUNCTION ==================
+
+# Define the main function for decision-making on queries.
+def FirstLayerDMM(prompt: str):
+    # Add the user's query to the messages list.
     messages.append({"role": "user", "content": f"{prompt}"})
+    
 
-    stream = co.chat_stream(
-        model='command-r-plus',
-        message=prompt,
-        temperature=0.7,
-        chat_history=ChatHistory,
-        prompt_truncation='OFF',
-        connectors=[],
-         preamble=preamble
-    )
+    # Create a streaming chat session with the Cohere model.
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": preamble},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=50
+        )
 
-    response = ""
+        raw = response.choices[0].message.content.strip()
 
-    for event in stream:
-        if event.event_type == "text-generation":
-            response += event.text
+    except Exception as e:
+        print(f"[red]Groq error:[/red] {e}")
+        return ["error"]
 
-    response = response.replace("\n", "")
-    response = response.split(",")
+    # Initialize an empty string to store the generated response.
+    # Clean + filter output
+    raw = raw.replace("\n", "")
+    parts = [i.strip() for i in raw.split(",")]
 
-    response = [i.strip() for i in response]
-
-    temp = []
-
-    for task in response:
+    final = []
+    for task in parts:
         for func in funcs:
             if task.startswith(func):
-                temp.append(task)
+                final.append(task)
 
+    return final
 
-    response = temp
-
-    if "(query)" in response:
-        newresponse = FirstLayerDMM(prompt=prompt)
-        return newresponse
-    else:
-        return response
-    
 if __name__ == "__main__":
     while True:
-        print(FirstLayerDMM(input(">>> ")))
+        user_input = input(">>> ")
+        result = FirstLayerDMM(user_input)
+        print(result)

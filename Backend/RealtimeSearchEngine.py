@@ -25,15 +25,19 @@ except:
         dump([], f)
 
 def GoogleSearch(query):
-    results = list(search(query, advanced=True, num_results=5))
-    Answer = f"The search results for '{query}' are:\n[start]\n"
-    
+    try:
+        results = list(search(query, advanced=True, num_results=5))
+    except Exception:
+        results = []
 
+    if not results:
+        return ""   # ⬅️ VERY IMPORTANT
+
+    answer = f"The search results for '{query}' are:\n[start]\n"
     for i in results:
-        Answer += f"Title: {i.title}\nDescription: {i.description}\n\n"
-        
-    Answer += "[end]"
-    return Answer
+        answer += f"Title: {i.title}\nDescription: {i.description}\n\n"
+    answer += "[end]"
+    return answer
 
 
 def AnswerModifier (Answer):
@@ -78,10 +82,14 @@ def RealtimeSearchEngine (prompt):
         messages = load(f)
     messages.append({"role": "user", "content": f"{prompt}"})
 
-    SystemChatBot.append({"role": "system", "content": GoogleSearch(prompt)})
+    search_data = GoogleSearch(prompt)
+
+    if search_data:
+        SystemChatBot.append({"role": "system", "content": search_data})
+
 
     completion = client.chat.completions.create(
-        model="llama3-70b-8192",
+        model="llama-3.3-70b-versatile",
         messages = SystemChatBot + [{"role": "system", "content": Information()}] + messages,
         temperature=0.7,
         max_tokens=1024,
@@ -98,12 +106,19 @@ def RealtimeSearchEngine (prompt):
             Answer += chunk.choices[0].delta.content
     
     Answer = Answer.strip().replace("</s>", "")
+    # 🔴 ADD THIS RIGHT HERE
+    if not Answer.strip():
+        Answer = "Sorry, I couldn’t fetch live data. Here’s what I know from general knowledge."
+
     messages.append({"role": "assistant", "content": Answer})
+    
     
     with open(r"Data\ChatLog.json", "w") as f:
         dump(messages, f, indent=4)
         
-    SystemChatBot.pop()
+    if SystemChatBot:
+        SystemChatBot.pop()
+        
     return AnswerModifier(Answer)
 
 if __name__ == "__main__":
