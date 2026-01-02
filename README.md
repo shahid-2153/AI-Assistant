@@ -18,35 +18,7 @@ A modular, Python-based AI voice assistant featuring speech recognition, interru
 - 🛑 **CPU-style Interrupt Handling**
 - 🖥️ **GUI Interface**
 - 🧩 **Modular Backend Design**
-
----
-
-## 🏗️ Project Structure
-
-AI Assistant/
-│
-├── Backend/
-│ ├── Automation.py
-│ ├── Chatbot.py
-│ ├── Model.py
-│ ├── RealtimeSearchEngine.py
-│ ├── SpeechToText.py
-│ ├── TextToSpeech.py
-│ └── init.py
-│
-├── Frontend/
-│ ├── GUI.py
-│ └── Files/ # Runtime files (ignored in git)
-│
-├── RVC/
-│ ├── inference.py
-│ └── requirements.txt
-│
-├── Main.py
-├── Requirements.txt
-├── .gitignore
-└── README.md
-
+- 
 ---
 
 ## 🚀 How It Works
@@ -154,13 +126,3 @@ License can be added later if open-sourced publicly.
 
 
 ---
-
-## ✅ What you should do next
-
-1. Create `README.md`
-2. Paste the content above
-3. Run:
-```bash
-git add README.md
-git commit -m "Add README documentation"
-git push
